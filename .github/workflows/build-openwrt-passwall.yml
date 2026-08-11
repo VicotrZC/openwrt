@@ -6,7 +6,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-24.04
-    timeout-minutes: 180
+    timeout-minutes: 360
     env:
       MAKE_JOBS: 2
 
@@ -107,7 +107,7 @@ jobs:
           ) &
           monitor_pid=$!
 
-          /usr/bin/time -v timeout --kill-after=5m 120m \
+          /usr/bin/time -v timeout --kill-after=5m 330m \
             make -j"$MAKE_JOBS" V=s > build.log 2>&1
           build_rc=$?
 
