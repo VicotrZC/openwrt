@@ -1,4 +1,4 @@
-name: Build OpenWrt 25.12 x86-64 PassWall
+name: Build OpenWrt 25.12.5 x86-64 PassWall
 
 on:
   workflow_dispatch:
@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 360
     env:
-      MAKE_JOBS: 2
+      MAKE_JOBS: 4
 
     steps:
       - name: Install build dependencies
@@ -19,17 +19,17 @@ jobs:
             libncurses-dev libssl-dev python3 python3-setuptools \
             rsync unzip zlib1g-dev file wget time procps
 
-      - name: Clone OpenWrt 25.12
+      - name: Clone OpenWrt 25.12.5
         run: |
           git clone --depth=1 \
-            --branch openwrt-25.12 \
+            --branch v25.12.5 \
             https://github.com/openwrt/openwrt.git openwrt
 
       - name: Restore OpenWrt download cache
         uses: actions/cache@v4
         with:
           path: openwrt/dl
-          key: openwrt-25.12-x86-64-passwall-dl-v2
+          key: openwrt-25.12.5-x86-64-passwall-dl-v3
 
       - name: Runner diagnostics
         run: |
@@ -55,7 +55,7 @@ jobs:
           ./scripts/feeds update -a
           ./scripts/feeds install -a
 
-      - name: Configure x86-64 Generic
+      - name: Configure x86-64 Generic with full current package set
         working-directory: openwrt
         run: |
           cat > .config <<'EOF'
@@ -64,15 +64,67 @@ jobs:
           CONFIG_TARGET_x86_64_DEVICE_generic=y
           CONFIG_TARGET_ROOTFS_EXT4FS=y
           CONFIG_TARGET_ROOTFS_SQUASHFS=y
-          CONFIG_TARGET_ROOTFS_PARTSIZE=512
+          CONFIG_TARGET_ROOTFS_PARTSIZE=2048
+
           CONFIG_PACKAGE_luci=y
+          CONFIG_PACKAGE_luci-light=y
           CONFIG_PACKAGE_luci-i18n-base-zh-cn=y
+          CONFIG_PACKAGE_luci-app-firewall=y
+          CONFIG_PACKAGE_luci-app-package-manager=y
+          CONFIG_PACKAGE_luci-i18n-package-manager-zh-cn=y
           CONFIG_PACKAGE_luci-app-passwall=y
           CONFIG_PACKAGE_luci-i18n-passwall-zh-cn=y
+          CONFIG_PACKAGE_luci-ssl=y
+          CONFIG_PACKAGE_luci-theme-argon=y
+          CONFIG_PACKAGE_luci-theme-bootstrap=y
+          CONFIG_PACKAGE_luci-proto-ipv6=y
+          CONFIG_PACKAGE_luci-proto-ppp=y
+
+          CONFIG_PACKAGE_dnsmasq-full=y
+          CONFIG_PACKAGE_dropbear=y
+          CONFIG_PACKAGE_firewall4=y
+          CONFIG_PACKAGE_haproxy=y
+          CONFIG_PACKAGE_ip-full=y
+          CONFIG_PACKAGE_nftables-json=y
+          CONFIG_PACKAGE_uhttpd=y
+          CONFIG_PACKAGE_uhttpd-mod-ubus=y
+          CONFIG_PACKAGE_curl=y
+          CONFIG_PACKAGE_coreutils=y
+          CONFIG_PACKAGE_coreutils-base64=y
+          CONFIG_PACKAGE_coreutils-nohup=y
+          CONFIG_PACKAGE_coreutils-timeout=y
+          CONFIG_PACKAGE_unzip=y
+
+          CONFIG_PACKAGE_chinadns-ng=y
+          CONFIG_PACKAGE_dns2socks=y
+          CONFIG_PACKAGE_geoview=y
+          CONFIG_PACKAGE_ipt2socks=y
+          CONFIG_PACKAGE_microsocks=y
+          CONFIG_PACKAGE_shadowsocks-rust-sslocal=y
+          CONFIG_PACKAGE_shadowsocksr-libev-ssr-local=y
+          CONFIG_PACKAGE_shadowsocksr-libev-ssr-redir=y
+          CONFIG_PACKAGE_simple-obfs-client=y
+          CONFIG_PACKAGE_sing-box=y
+          CONFIG_PACKAGE_tcping=y
+          CONFIG_PACKAGE_v2ray-plugin=y
           CONFIG_PACKAGE_xray-core=y
+
+          CONFIG_PACKAGE_kmod-tun=y
+          CONFIG_PACKAGE_kmod-nf-tproxy=y
+          CONFIG_PACKAGE_kmod-nft-tproxy=y
+          CONFIG_PACKAGE_kmod-nf-socket=y
+          CONFIG_PACKAGE_kmod-nft-socket=y
+          CONFIG_PACKAGE_kmod-nft-offload=y
+          CONFIG_PACKAGE_kmod-e1000=y
+          CONFIG_PACKAGE_kmod-e1000e=y
+          CONFIG_PACKAGE_kmod-igb=y
+          CONFIG_PACKAGE_kmod-igc=y
+          CONFIG_PACKAGE_kmod-r8169=y
           EOF
 
           make defconfig
+          echo "=== SELECTED FEATURE PACKAGES ==="
+          grep -E 'CONFIG_(PACKAGE_(luci|haproxy|sing-box|xray-core|shadowsocks|ssr|simple-obfs|v2ray-plugin|chinadns|dns2socks|geoview|ipt2socks|microsocks|tcping)|TARGET_ROOTFS_PARTSIZE|TARGET_x86)' .config || true
 
       - name: Download sources
         working-directory: openwrt
@@ -155,7 +207,7 @@ jobs:
       - name: Upload firmware
         uses: actions/upload-artifact@v4
         with:
-          name: openwrt-25.12-x86-64-passwall
+          name: openwrt-25.12.5-x86-64-passwall
           path: openwrt/bin/targets/x86/64/
           if-no-files-found: error
           retention-days: 7
